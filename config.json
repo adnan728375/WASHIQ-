@@ -42,7 +42,7 @@
     "notes": "If enabled, only threads in whiteListThreadIds can use the bot."
   },
   "database": {
-    "type": "sqlite",
+    "type": "mongodb",
     "uriMongodb": "mongodb+srv://Washik:Adnan4321@washik.ayfqxqw.mongodb.net/?appName=Washik",
     "autoSyncWhenStart": false,
     "autoRefreshThreadInfoFirstTime": true,
@@ -150,4 +150,4 @@
     "autoReconnect": false,
     "notes": "Docs: https://github.com/ntkhang03/fb-chat-api/blob/master/DOCS.md#apisetoptionsoptions"
   }
-}
+  }
