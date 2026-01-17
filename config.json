@@ -43,7 +43,7 @@
   },
   "database": {
     "type": "sqlite",
-    "uriMongodb": "",
+    "uriMongodb": "mongodb+srv://Washik:Adnan4321@washik.ayfqxqw.mongodb.net/?appName=Washik",
     "autoSyncWhenStart": false,
     "autoRefreshThreadInfoFirstTime": true,
     "notes": "Recommended using 'mongodb' or 'sqlite'."
