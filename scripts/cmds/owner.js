@@ -1,55 +1,50 @@
-const os = require("os");
 const { createCanvas, loadImage } = require("canvas");
 const fs = require("fs");
 const path = require("path");
 
 const W = 490, H = 840;
-// Eikhane amar dewa default chobi thakbe, tumi chaile pore link bodle nite paro
-const AVATAR1 = "https://i.ibb.co/MC6bT5V/default-avatar.png"; 
+
+const AVATAR1 = "https://files.catbox.moe/x0uu6r.jpg";
 const FALLBACK_AVATAR = "https://i.ibb.co/MC6bT5V/default-avatar.png";
 
-function formatUptime(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const days = Math.floor(totalSeconds / (3600 * 24));
-  const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-}
-
+// 🔷 Dodecagon Avatar
 async function drawDodecagonAvatar(ctx, url, x, y, size, ringColors) {
   const sides = 12;
   const radius = size / 2;
 
+  // Glow Rings
   for (let i = 0; i < ringColors.length; i++) {
     ctx.beginPath();
     for (let j = 0; j < sides; j++) {
-      const angle = (Math.PI * 2 / sides) * j;
-      const rx = x + radius + Math.cos(angle) * (radius + i * 8);
-      const ry = y + radius + Math.sin(angle) * (radius + i * 8);
-      if (j === 0) ctx.moveTo(rx, ry);
-      else ctx.lineTo(rx, ry);
+      const a = (Math.PI * 2 / sides) * j;
+      const rx = x + radius + Math.cos(a) * (radius + i * 8);
+      const ry = y + radius + Math.sin(a) * (radius + i * 8);
+      j === 0 ? ctx.moveTo(rx, ry) : ctx.lineTo(rx, ry);
     }
     ctx.closePath();
     ctx.strokeStyle = ringColors[i];
     ctx.lineWidth = 4;
     ctx.shadowColor = ringColors[i];
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 22;
     ctx.stroke();
   }
 
+  // Safe Image Load
   let img;
-  try { img = await loadImage(url); }
-  catch { img = await loadImage(FALLBACK_AVATAR); }
+  try {
+    img = await loadImage(url);
+  } catch {
+    img = await loadImage(FALLBACK_AVATAR);
+  }
 
+  // Clip Shape
   ctx.save();
   ctx.beginPath();
   for (let j = 0; j < sides; j++) {
-    const angle = (Math.PI * 2 / sides) * j;
-    const rx = x + radius + Math.cos(angle) * radius;
-    const ry = y + radius + Math.sin(angle) * radius;
-    if (j === 0) ctx.moveTo(rx, ry);
-    else ctx.lineTo(rx, ry);
+    const a = (Math.PI * 2 / sides) * j;
+    const rx = x + radius + Math.cos(a) * radius;
+    const ry = y + radius + Math.sin(a) * radius;
+    j === 0 ? ctx.moveTo(rx, ry) : ctx.lineTo(rx, ry);
   }
   ctx.closePath();
   ctx.clip();
@@ -57,100 +52,107 @@ async function drawDodecagonAvatar(ctx, url, x, y, size, ringColors) {
   ctx.restore();
 }
 
-async function drawPage1(ctx) {
-  // Background: Deep Blue to Black for a pro look
-  const gradient = ctx.createLinearGradient(0, 0, 0, H);
-  gradient.addColorStop(0, "#001a33");
-  gradient.addColorStop(1, "#000000");
-  ctx.fillStyle = gradient;
+// 🔷 Main Page
+async function drawPage(ctx) {
+  // 🌌 Unique Background
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, "#12001f"); // Royal Purple
+  bg.addColorStop(0.5, "#050014");
+  bg.addColorStop(1, "#000000");
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Cool particles
-  for (let i = 0; i < 15; i++) {
-    ctx.beginPath();
-    ctx.fillStyle = "rgba(0, 212, 255, 0.2)";
-    ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 3, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // Avatar
+  await drawDodecagonAvatar(
+    ctx,
+    AVATAR1,
+    W / 2 - 90,
+    60,
+    180,
+    ["#00f5ff", "#7b2cff", "#ff4fd8"] // UNIQUE THEME
+  );
 
-  await drawDodecagonAvatar(ctx, AVATAR1, W / 2 - 90, 60, 180, [
-    "#00d4ff", "#0055ff", "#0022ff"
-  ]);
-
-  ctx.font = "bold 40px Arial";
+  // 🔹 Title
   ctx.textAlign = "center";
-  ctx.fillStyle = "#00d4ff";
-  ctx.shadowColor = "#00d4ff";
-  ctx.shadowBlur = 15;
-  ctx.fillText("Washiq", W / 2, 295);
+  ctx.font = "bold 42px Arial";
+  ctx.fillStyle = "#00f5ff";
+  ctx.shadowColor = "#7b2cff";
+  ctx.shadowBlur = 30;
+  ctx.fillText("Raha Ai", W / 2, 300);
 
+  // 🔹 Subtitle
   ctx.font = "italic 22px Arial";
   ctx.fillStyle = "#ffffff";
-  ctx.shadowBlur = 5;
-  ctx.fillText("Developer & Creator", W / 2, 330);
+  ctx.shadowColor = "#00f5ff";
+  ctx.shadowBlur = 15;
+  ctx.fillText("Developer Information", W / 2, 335);
+  ctx.shadowBlur = 0;
 
-  // Info Box
-  ctx.fillStyle = "rgba(0, 212, 255, 0.05)";
-  ctx.fillRect(40, 365, W - 80, 385);
-  ctx.strokeStyle = "#00d4ff";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(40, 365, W - 80, 385);
+  // 🔹 Info Box
+  ctx.fillStyle = "rgba(255,255,255,0.05)";
+  ctx.fillRect(40, 365, W - 80, 390);
 
+  ctx.strokeStyle = "#7b2cff";
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = "#00f5ff";
+  ctx.shadowBlur = 15;
+  ctx.strokeRect(40, 365, W - 80, 390);
+  ctx.shadowBlur = 0;
+
+  // 🔹 Info Text
   ctx.font = "20px Arial";
-  ctx.fillStyle = "#e6f7ff";
-  ctx.textAlign = "left";
+  ctx.fillStyle = "#eafcff";
 
-  const info = [
-    "● Name: Washiq",
-    "● Spouse: Raha Jannat Megh",
-    "● Project: Washiq Ai Chatbot",
-    "● Role: Full Stack Developer",
-    "● Platform: FB Messenger",
-    "● Nationality: Bangladeshi",
-    "● FB: facebook.com/61574715983842",
-    `● Date: ${new Date().toLocaleDateString("en-BD")}`
+  const lines = [
+    "Name: Washiq Adnan",
+    "Address: Dinajpur, Bangladesh",
+    "Date of Birth: 27 July 2007",
+    "Religion: Islam",
+    "",
+    "🎀 Profession 🎀",
+    "Student: HSC 2nd Year",
+    "Chatbot Developer"
   ];
 
   let y = 415;
-  for (const line of info) {
-    ctx.fillText(line, 70, y);
-    y += 45;
+  for (const line of lines) {
+    ctx.fillText(line, W / 2, y);
+    y += line === "" ? 22 : 40;
   }
 
-  ctx.font = "italic 16px Arial";
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#555";
-  ctx.fillText("Created by Washiq Ai Development", W / 2, H - 30);
+  // 🔹 Footer
+  ctx.font = "italic 17px Arial";
+  ctx.fillStyle = "#ff4fd8";
+  ctx.fillText("© Raha Ai Development", W / 2, H - 35);
 }
 
 module.exports = {
   config: {
     name: "info",
-    aliases: ["owner", "washiq", "in4"],
-    version: "2.1",
-    author: "Washiq",
+    aliases: ["raha", "owner"],
+    version: "FINAL",
+    author: "Washiq Adnan",
     countDown: 5,
     role: 0,
-    shortDescription: "Shows Developer Info Card",
-    category: "system"
+    shortDescription: "Developer Info",
+    category: "info"
   },
 
   onStart: async function ({ message }) {
     const canvas = createCanvas(W, H);
     const ctx = canvas.getContext("2d");
 
-    await drawPage1(ctx);
+    await drawPage(ctx);
 
     const buffer = canvas.toBuffer("image/png");
     const dir = path.join(__dirname, "cache");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-    const filePath = path.join(dir, `washiq_info.png`);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    const filePath = path.join(dir, "raha_info.png");
     fs.writeFileSync(filePath, buffer);
-    
-    return message.reply({ 
-      body: "Here is my Master's Information!",
-      attachment: fs.createReadStream(filePath) 
+
+    return message.reply({
+      attachment: fs.createReadStream(filePath)
     });
   }
 };
-      
