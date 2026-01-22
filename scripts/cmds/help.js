@@ -1,115 +1,187 @@
 const fs = require("fs-extra");
 const path = require("path");
-const https = require("https");
+
+const { commands, aliases } = global.GoatBot;
 
 module.exports = {
   config: {
     name: "help",
     aliases: ["menu", "commands"],
-    version: "5.0",
+    version: "5.0-converted",
     author: "AKASH",
-    shortDescription: "Show all commands",
-    longDescription: "Show all commands in fancy font with boxes",
-    category: "system",
-    guide: "{pn}help [command name]"
+    countDown: 5,
+    role: 0,
+    shortDescription: { en: "View command list with pages + command details" },
+    longDescription: { en: "Shows all commands by category with page system and fancy style" },
+    category: "info",
+    guide: { en: "{pn} [page] / {pn} <cmdName>" },
+    priority: 1
   },
 
-  onStart: async function({ message, args, prefix }) {
-    const allCommands = global.GoatBot.commands;
-    const categories = {};
+  onStart: async function ({ message, args, event, threadsData, role }) {
+    const { threadID } = event;
 
-    // Command font (𝐀𝐀𝐀𝐀𝐁𝐁 style)
-    const fancyFont = (str) => str.replace(/[A-Za-z]/g, (c) => {
-      const map = {
-        A:"𝐀", B:"𝐁", C:"𝐂", D:"𝐃", E:"𝐄", F:"𝐅", G:"𝐆", H:"𝐇",
-        I:"𝐈", J:"𝐉", K:"𝐊", L:"𝐋", M:"𝐌", N:"𝐍", O:"𝐎", P:"𝐏",
-        Q:"𝐐", R:"𝐑", S:"𝐒", T:"𝐓", U:"𝐔", V:"𝐕", W:"𝐖", X:"𝐗",
-        Y:"𝐘", Z:"𝐙",
-        a:"𝐚", b:"𝐛", c:"𝐜", d:"𝐝", e:"𝐞", f:"𝐟", g:"𝐠", h:"𝐡",
-        i:"𝐢", j:"𝐣", k:"𝐤", l:"𝐥", m:"𝐦", n:"𝐧", o:"𝐨", p:"𝐩",
-        q:"𝐪", r:"𝐫", s:"𝐬", t:"𝐭", u:"𝐮", v:"𝐯", w:"𝐰", x:"𝐱",
-        y:"𝐲", z:"𝐳"
+    // Prefix (global + box)
+    const threadData = await threadsData.get(threadID);
+    const globalPrefix = global.GoatBot.config.prefix;
+    const boxPrefix = threadData.data?.prefix || globalPrefix;
+
+    // Fancy font converter (𝐀𝐁𝐂…)
+    const fancyFont = (text) => {
+      const fonts = {
+        a: "𝐚", b: "𝐛", c: "𝐜", d: "𝐝", e: "𝐞", f: "𝐟", g: "𝐠", h: "𝐡", i: "𝐢", j: "𝐣", k: "𝐤", l: "𝐥", m: "𝐦",
+        n: "𝐧", o: "𝐨", p: "𝐩", q: "𝐪", r: "𝐫", s: "𝐬", t: "𝐭", u: "𝐮", v: "𝐯", w: "𝐰", x: "𝐱", y: "𝐲", z: "𝐳",
+        A: "𝐀", B: "𝐁", C: "𝐂", D: "𝐃", E: "𝐄", F: "𝐅", G: "𝐆", H: "𝐇", I: "𝐈", J: "𝐉", K: "𝐊", L: "𝐋", M: "𝐌",
+        N: "𝐍", O: "𝐎", P: "𝐏", Q: "𝐐", R: "𝐑", S: "𝐒", T: "𝐓", U: "𝐔", V: "𝐕", W: "𝐖", X: "𝐗", Y: "𝐘", Z: "𝐙",
+        "0": "𝟎", "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗"
       };
-      return map[c] || c;
-    });
+      return String(text).split("").map(ch => fonts[ch] || ch).join("");
+    };
 
-    // Category font (𝚂𝚈𝚂𝚃𝙴𝙼 style) for ALL categories
-    const categoryFont = (str) => str.split("").map(c => {
-      const map = {
-        A:"𝙰", B:"𝙱", C:"𝙲", D:"𝙳", E:"𝙴", F:"𝙵", G:"𝙶", H:"𝙷",
-        I:"𝙸", J:"𝙹", K:"𝙺", L:"𝙻", M:"𝙼", N:"𝙽", O:"𝙾", P:"𝙿",
-        Q:"𝚀", R:"𝚁", S:"𝚂", T:"𝚃", U:"𝚄", V:"𝚅", W:"𝚆", X:"𝚇",
-        Y:"𝚈", Z:"𝚉",
-        a:"𝚊", b:"𝚋", c:"𝚌", d:"𝚍", e:"𝚎", f:"𝚏", g:"𝚐", h:"𝚑",
-        i:"𝚒", j:"𝚓", k:"𝚔", l:"𝚕", m:"𝚖", n:"𝚗", o:"𝚘", p:"𝚙",
-        q:"𝚚", r:"𝚛", s:"𝚜", t:"𝚝", u:"𝚞", v:"𝚟", w:"𝚠", x:"𝚡",
-        y:"𝚢", z:"𝚣"
-      };
-      return map[c] || c;
-    }).join("");
+    // role text
+    const roleTextToString = (r) => {
+      switch (r) {
+        case 0: return "𝟎 (𝐀𝐥𝐥 𝐮𝐬𝐞𝐫𝐬)";
+        case 1: return "𝟏 (𝐆𝐫𝐨𝐮𝐩 𝐚𝐝𝐦𝐢𝐧𝐬)";
+        case 2: return "𝟐 (𝐁𝐨𝐭 𝐚𝐝𝐦𝐢𝐧)";
+        default: return "𝐔𝐧𝐤𝐧𝐨𝐰𝐧";
+      }
+    };
 
-    const cleanCategoryName = (text) => text ? text.toLowerCase() : "others";
+    // Collect categories (like 2nd style)
+    const getCommandCategories = () => {
+      const cats = {};
+      for (const [name, cmd] of commands) {
+        // role filter
+        if (cmd.config?.role > 0 && role < cmd.config.role) continue;
 
-    // Categorize commands
-    for (const [name, cmd] of allCommands) {
-      const cat = cleanCategoryName(cmd.config.category);
-      if (!categories[cat]) categories[cat] = [];
-      categories[cat].push(name);
-    }
+        const category = cmd.config?.category || "Uncategorized";
+        cats[category] = cats[category] || { commands: [] };
+        cats[category].commands.push(name);
+      }
+      return cats;
+    };
 
-    // Format commands **inside the box**
-    const formatCommandsBox = (cmds) =>
-      cmds.sort().map(c => `│  │ ⎙ ${fancyFont(c)}`).join("\n");
+    // Pagination generator (category based)
+    const generateCommandList = (page = 1, categories) => {
+      const categoryKeys = Object.keys(categories).sort((a, b) => a.localeCompare(b));
+      const categoriesPerPage = 10; // like 2nd style
+      const totalPages = Math.max(1, Math.ceil(categoryKeys.length / categoriesPerPage));
 
-    // Build message
-    let msg = `│\n│  ${fancyFont("COMMANDS MENU")}\n│  ───────────────\n`;
-    msg += `│  ${fancyFont("PREFIX")} : ${prefix}\n`;
-    msg += `│  ${fancyFont("TOTAL")}  : ${allCommands.size}\n`;
-    msg += `│  ${fancyFont("AUTHOR")} : AKASH\n│\n`;
+      const currentPage = Math.max(1, Math.min(page, totalPages));
+      const startIndex = (currentPage - 1) * categoriesPerPage;
+      const endIndex = startIndex + categoriesPerPage;
+      const currentCategories = categoryKeys.slice(startIndex, endIndex);
 
-    for (const cat of Object.keys(categories)) {
-      msg += `│  ┌─ ${categoryFont(cat.toUpperCase())} ─┐\n`;
-      msg += formatCommandsBox(categories[cat]) + "\n";
-      msg += `│  └─────────────┘\n│\n`;
-    }
+      const totalCommands = commands.size;
 
-    msg += `│  𝐔𝐒𝐄 : ${prefix}help <command>\n│`;
+      let msg = "";
+      msg += "୨୧ ─·· 🍰 𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐌𝐞𝐧𝐮 🍰 ··─ ୨୧\n\n";
+      msg += `🍓 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: ${totalCommands}\n`;
+      msg += `🌐 𝐒𝐲𝐬𝐭𝐞𝐦 𝐩𝐫𝐞𝐟𝐢𝐱: ${globalPrefix}\n`;
+      msg += `🛸 𝐘𝐨𝐮𝐫 𝐛𝐨𝐱 𝐜𝐡𝐚𝐭 𝐩𝐫𝐞𝐟𝐢𝐱: ${boxPrefix}\n`;
+      msg += `📖 𝐏𝐚𝐠𝐞: ${currentPage} / ${totalPages}\n\n`;
 
-    // GIFs array
-    const gifURLs = [
-      "https://i.imgur.com/Xw6JTfn.gif",
-      "https://i.imgur.com/mW0yjZb.gif",
-      "https://i.imgur.com/KQBcxOV.gif"
+      for (const category of currentCategories) {
+        msg += `╭・─「 🌸 ${fancyFont(String(category).toUpperCase())} 🌸 」\n`;
+
+        const names = categories[category].commands.sort((a, b) => a.localeCompare(b));
+        const fancyNames = names.map(n => fancyFont(n));
+
+        // show in groups of 3 (same as 2nd)
+        for (let i = 0; i < fancyNames.length; i += 3) {
+          const group = fancyNames.slice(i, i + 3);
+          msg += `│  🎀 ${group.join(" ✧ ")}\n`;
+        }
+
+        msg += `╰・─── ⬦ 🍓 ⬦ ───・\n\n`;
+      }
+
+      // Footer nav + creator
+      msg += `╭─⋅──⋅୨♡୧⋅──⋅─\n`;
+      if (totalPages > 1) {
+        if (currentPage > 1) msg += `│ ⏪ 𝐔𝐬𝐞: ${boxPrefix}help ${currentPage - 1}\n`;
+        if (currentPage < totalPages) msg += `│ ⏩ 𝐔𝐬𝐞: ${boxPrefix}help ${currentPage + 1}\n`;
+      }
+      msg += `│ 🔍 𝐔𝐬𝐞: ${boxPrefix}help <cmd> for details\n`;
+      msg += `│ 👑 𝐂𝐫𝐞𝐚𝐭𝐨𝐫: ${fancyFont("AKASH")} ッ\n`;
+      msg += `╰─⋅──⋅୨♡୧⋅──⋅─\n`;
+      msg += `‧₊˚ ☁️⋅♡𓂃 ࣪ ִֶָ☾. 𝐏𝐚𝐠𝐞 ${currentPage}/${totalPages} ‧₊˚ ☁️⋅♡𓂃 ࣪ ִֶָ☾.`;
+
+      return { message: msg, totalPages, currentPage };
+    };
+
+    // attachments (same vibe as 2nd, easy)
+    const helpImages = [
+      "https://files.catbox.moe/5kb6w8.jpg"
     ];
-    const randomGifURL = gifURLs[Math.floor(Math.random() * gifURLs.length)];
-    const gifFolder = path.join(__dirname, "cache");
-    if (!fs.existsSync(gifFolder)) fs.mkdirSync(gifFolder, { recursive: true });
-    const gifName = path.basename(randomGifURL);
-    const gifPath = path.join(gifFolder, gifName);
+    const randomImage = helpImages[Math.floor(Math.random() * helpImages.length)];
 
-    if (!fs.existsSync(gifPath)) await downloadGif(randomGifURL, gifPath);
+    // 1) If user typed a page number
+    if (args.length > 0 && !isNaN(args[0])) {
+      const pageNum = parseInt(args[0]);
+      const categories = getCommandCategories();
+      const result = generateCommandList(pageNum, categories);
+
+      if (pageNum < 1 || pageNum > result.totalPages) {
+        return message.reply(`❌ 𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐩𝐚𝐠𝐞 𝐧𝐮𝐦𝐛𝐞𝐫! 𝐀𝐯𝐚𝐢𝐥𝐚𝐛𝐥𝐞: 1-${result.totalPages}`);
+      }
+
+      return message.reply({
+        body: result.message,
+        attachment: await global.utils.getStreamFromURL(randomImage)
+      });
+    }
+
+    // 2) If user typed a command name
+    if (args.length > 0 && isNaN(args[0])) {
+      const commandName = args[0].toLowerCase();
+      const command = commands.get(commandName) || commands.get(aliases.get(commandName));
+
+      if (!command) {
+        return message.reply(`❌ 𝐂𝐨𝐦𝐦𝐚𝐧𝐝 "${commandName}" 𝐧𝐨𝐭 𝐟𝐨𝐮𝐧𝐝.`);
+      }
+
+      const cfg = command.config || {};
+      const author = cfg.author || "Unknown";
+      const roleText = roleTextToString(cfg.role ?? 0);
+
+      // Support both string + {en:""} formats
+      const longDesc =
+        typeof cfg.longDescription === "string"
+          ? cfg.longDescription
+          : (cfg.longDescription?.en || "No description.");
+
+      // guide support
+      const guideRaw =
+        typeof cfg.guide === "string"
+          ? cfg.guide
+          : (cfg.guide?.en || "No guide available.");
+
+      const usage = guideRaw
+        .replace(/{pn}/g, boxPrefix + (cfg.name || commandName))
+        .replace(/{p}/g, boxPrefix)
+        .replace(/{n}/g, cfg.name || commandName);
+
+      const response =
+`╭────⊙『 **${fancyFont(String(cfg.name || commandName).toUpperCase())}** 』
+│ 📝 𝐃𝐞𝐬𝐜𝐫𝐢𝐩𝐭𝐢𝐨𝐧: ${longDesc}
+│ 👑 𝐀𝐮𝐭𝐡𝐨𝐫: ${author}
+│ ⚙️ 𝐆𝐮𝐢𝐝𝐞: ${usage}
+│ 🔯 𝐕𝐞𝐫𝐬𝐢𝐨𝐧: ${cfg.version || "1.0"}
+│ ♻️ 𝐑𝐨𝐥𝐞: ${roleText}
+╰────────────⊙`;
+
+      return message.reply(response);
+    }
+
+    // 3) Default: show page 1
+    const categories = getCommandCategories();
+    const result = generateCommandList(1, categories);
 
     return message.reply({
-      body: msg,
-      attachment: fs.createReadStream(gifPath)
+      body: result.message,
+      attachment: await global.utils.getStreamFromURL(randomImage)
     });
   }
 };
-
-// Download GIF function
-function downloadGif(url, dest) {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        fs.unlink(dest, () => {});
-        return reject(new Error(`Failed to download '${url}' (${res.statusCode})`));
-      }
-      res.pipe(file);
-      file.on("finish", () => file.close(resolve));
-    }).on("error", (err) => {
-      fs.unlink(dest, () => {});
-      reject(err);
-    });
-  });
-}
